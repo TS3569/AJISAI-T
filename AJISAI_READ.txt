@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AJISAI　読取</title>
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho&display=swap" rel="stylesheet">
+
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html, body {
+      width: 100%;
+      min-height: 100vh;
+      background-color: #0d0f12;
+      color: #e0e0e0;
+      font-family: 'Shippori Mincho', serif;
+      overflow-x: hidden;
+      overflow-y: auto;
+    }
+
+    #splash-screen {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100vh;
+      background-color: #0d0f12;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 9999;
+      transition: opacity 0.8s ease, visibility 0.8s ease;
+    }
+
+    .title-logo {
+      font-size: 3rem;
+      font-weight: bold;
+      color: #00ff66;
+      letter-spacing: 0.3em;
+      text-shadow: 0 0 10px #00ff66, 0 0 20px #00ff66, 0 0 40px #00ff66;
+      opacity: 0;
+      transform: scale(0.8);
+      animation: titleAnim 2.5s ease-out forwards;
+    }
+
+    @keyframes titleAnim {
+      0% {
+        opacity: 0;
+        transform: scale(0.8);
+        filter: blur(10px);
+      }
+      50% {
+        opacity: 1;
+        filter: blur(0px);
+      }
+      80% {
+        opacity: 1;
+        transform: scale(1.05);
+      }
+      100% {
+        opacity: 1;
+        transform: scale(1);
+      }
+    }
+
+    #splash-screen.fade-out {
+      opacity: 0;
+      visibility: hidden;
+    }
+
+    .app-container {
+      width: 100%;
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 20px 15px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
+      opacity: 0;
+      transition: opacity 0.8s ease;
+    }
+
+    .app-container.visible {
+      opacity: 1;
+    }
+
+    h1 {
+      color: #00ff66;
+      font-size: 1.5rem;
+      text-align: center;
+      text-shadow: 0 0 10px rgba(0, 255, 102, 0.5);
+      word-break: break-word;
+    }
+
+    .scanner-card {
+      width: 100%;
+      background: #16191f;
+      border: 1px solid #00ff66;
+      border-radius: 12px;
+      padding: 15px;
+      box-shadow: 0 0 15px rgba(0, 255, 102, 0.2);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .drop-zone {
+      width: 100%;
+      border: 2px dashed #00ff66;
+      border-radius: 8px;
+      padding: 20px 10px;
+      text-align: center;
+      color: #888;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      background: rgba(0, 255, 102, 0.02);
+    }
+
+    .drop-zone.dragover {
+      background: rgba(0, 255, 102, 0.15);
+      color: #00ff66;
+      box-shadow: inset 0 0 10px rgba(0, 255, 102, 0.5);
+    }
+
+    .drop-zone p {
+      font-size: 0.85rem;
+      color: #aaa;
+      margin-top: 5px;
+    }
+
+    #video-container {
+      width: 100%;
+      position: relative;
+      border-radius: 8px;
+      overflow: hidden;
+      background: #000;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    video {
+      width: 100%;
+      height: auto;
+      max-height: 40vh;
+      object-fit: cover;
+      display: block;
+    }
+
+    .neon-btn {
+      width: 100%;
+      padding: 12px;
+      background: transparent;
+      color: #00ff66;
+      border: 2px solid #00ff66;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      font-weight: bold;
+      font-family: 'Shippori Mincho', serif;
+      cursor: pointer;
+      text-shadow: 0 0 5px #00ff66;
+      box-shadow: 0 0 10px rgba(0, 255, 102, 0.3);
+      transition: all 0.2s ease;
+    }
+
+    .neon-btn:hover {
+      background: #00ff66;
+      color: #0d0f12;
+      box-shadow: 0 0 20px rgba(0, 255, 102, 0.8);
+    }
+
+    .close-btn {
+      margin-top: 10px;
+      border-color: #ff3366;
+      color: #ff3366;
+      text-shadow: 0 0 5px #ff3366;
+      box-shadow: 0 0 10px rgba(255, 51, 102, 0.3);
+    }
+
+    .close-btn:hover {
+      background: #ff3366;
+      color: #ffffff;
+      box-shadow: 0 0 20px rgba(255, 51, 102, 0.8);
+    }
+
+    .result-card {
+      width: 100%;
+      background: #16191f;
+      border: 1px solid #333;
+      border-radius: 12px;
+      padding: 20px;
+      display: none;
+      flex-direction: column;
+      gap: 15px;
+    }
+
+    .result-card.active {
+      display: flex;
+      border-color: #00ff66;
+      box-shadow: 0 0 10px rgba(0, 255, 102, 0.3);
+    }
+
+    .food-title {
+      font-size: 1.3rem;
+      color: #00ff66;
+      border-bottom: 1px solid #00ff66;
+      padding-bottom: 8px;
+      word-break: break-all;
+    }
+
+    .info-section {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .info-label {
+      font-size: 0.85rem;
+      color: #888;
+      font-weight: bold;
+    }
+
+    .info-content {
+      font-size: 1rem;
+      color: #fff;
+      word-break: break-all;
+      line-height: 1.5;
+    }
+
+    .allergy-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 4px;
+    }
+
+    .tag {
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 0.8rem;
+      font-weight: bold;
+      white-space: nowrap;
+    }
+
+    .tag.mandatory {
+      background-color: #ff3366;
+      color: #fff;
+      box-shadow: 0 0 5px rgba(255, 51, 102, 0.5);
+    }
+
+    .tag.recommended {
+      background-color: #ffaa00;
+      color: #000;
+    }
+
+    #file-input, #canvas {
+      display: none;
+    }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+</head>
+<body>
+
+  <div id="splash-screen">
+    <div class="title-logo">AJISAI</div>
+  </div>
+
+  <div id="app-container" class="app-container">
+    <h1>AJISAI　読取</h1>
+
+    <div id="scanner-card" class="scanner-card">
+      <button id="start-btn" class="neon-btn" onclick="startCamera()">カメラでスキャン</button>
+      
+      <div id="video-container" style="display:none;">
+        <video id="video" playsinline></video>
+      </div>
+
+      <div id="drop-zone" class="drop-zone">
+        <span style="color: #00ff66;">画像をドラッグ＆ドロップ</span>
+        <p>またはクリックしてファイル選択 / 画面上で貼り付け (Ctrl+V)</p>
+      </div>
+      <input type="file" id="file-input" accept="image/*">
+    </div>
+
+    <div id="result-card" class="result-card">
+      <div id="food-name" class="food-title"></div>
+
+      <div class="info-section">
+        <span class="info-label">■ 原材料</span>
+        <div id="ingredients" class="info-content"></div>
+      </div>
+
+      <div class="info-section">
+        <span class="info-label">■ アレルギー源（28品目）</span>
+        <div id="allergies" class="allergy-tags"></div>
+      </div>
+
+      <div class="info-section">
+        <span class="info-label">■ 保存方法</span>
+        <div id="storage" class="info-content"></div>
+      </div>
+
+      <button class="neon-btn close-btn" onclick="resetUI()">閉じる</button>
+    </div>
+  </div>
+
+  <canvas id="canvas"></canvas>
+
+  <script>
+    window.addEventListener('DOMContentLoaded', () => {
+      const splashScreen = document.getElementById('splash-screen');
+      const appContainer = document.getElementById('app-container');
+
+      setTimeout(() => {
+        splashScreen.classList.add('fade-out');
+        appContainer.classList.add('visible');
+      }, 2500);
+    });
+
+    const mandatoryList = ["えび", "かに", "くるみ", "小麦", "そば", "卵", "乳", "落花生（ピーナッツ）"];
+    let videoStream = null;
+
+    const scannerCard = document.getElementById('scanner-card');
+    const resultCard = document.getElementById('result-card');
+    const dropZone = document.getElementById('drop-zone');
+    const fileInput = document.getElementById('file-input');
+
+    dropZone.addEventListener('click', () => fileInput.click());
+
+    fileInput.addEventListener('change', (e) => {
+      if (e.target.files.length > 0) {
+        processImageFile(e.target.files[0]);
+      }
+    });
+
+    dropZone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      dropZone.classList.add('dragover');
+    });
+
+    dropZone.addEventListener('dragleave', () => {
+      dropZone.classList.remove('dragover');
+    });
+
+    dropZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropZone.classList.remove('dragover');
+      if (e.dataTransfer.files.length > 0) {
+        processImageFile(e.dataTransfer.files[0]);
+      }
+    });
+
+    document.addEventListener('paste', (e) => {
+      if (scannerCard.style.display === 'none') return;
+
+      const items = (e.clipboardData || e.originalEvent.clipboardData).items;
+      for (let item of items) {
+        if (item.kind === 'file' && item.type.startsWith('image/')) {
+          const file = item.getAsFile();
+          processImageFile(file);
+          break;
+        }
+      }
+    });
+
+    function processImageFile(file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.getElementById('canvas');
+          const ctx = canvas.getContext('2d');
+          canvas.width = img.width;
+          canvas.height = img.height;
+          ctx.drawImage(img, 0, 0, img.width, img.height);
+
+          const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+          const code = jsQR(imageData.data, imageData.width, imageData.height);
+
+          if (code) {
+            try {
+              const data = JSON.parse(code.data);
+              displayInfo(data);
+            } catch (err) {
+              alert("QRコードから食品情報を検出できませんでした。");
+            }
+          } else {
+            alert("画像内に明確なQRコードが見つかりませんでした。");
+          }
+          fileInput.value = '';
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function startCamera() {
+      const video = document.getElementById('video');
+      const videoContainer = document.getElementById('video-container');
+      const startBtn = document.getElementById('start-btn');
+      
+      navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
+        .then(stream => {
+          videoStream = stream;
+          video.srcObject = stream;
+          video.setAttribute("playsinline", true);
+          video.play();
+          videoContainer.style.display = "flex";
+          startBtn.innerText = "スキャン中...";
+          startBtn.style.pointerEvents = "none";
+          requestAnimationFrame(tick);
+        })
+        .catch(err => {
+          alert('カメラの起動に失敗しました: ' + err);
+        });
+    }
+
+    function stopCamera() {
+      if (videoStream) {
+        videoStream.getTracks().forEach(track => track.stop());
+        videoStream = null;
+      }
+      document.getElementById('video-container').style.display = "none";
+      const startBtn = document.getElementById('start-btn');
+      startBtn.innerText = "カメラでスキャン";
+      startBtn.style.pointerEvents = "auto";
+    }
+
+    function tick() {
+      const video = document.getElementById('video');
+      if (videoStream && video.readyState === video.HAVE_ENOUGH_DATA) {
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        canvas.height = video.videoHeight;
+        canvas.width = video.videoWidth;
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const code = jsQR(imageData.data, imageData.width, imageData.height);
+
+        if (code) {
+          try {
+            const data = JSON.parse(code.data);
+            displayInfo(data);
+            return;
+          } catch (e) {
+          }
+        }
+      }
+      if (videoStream) {
+        requestAnimationFrame(tick);
+      }
+    }
+
+    // 表示切替・リセット処理
+    function displayInfo(data) {
+      stopCamera();
+
+      scannerCard.style.display = 'none';
+
+      document.getElementById('food-name').innerText = data.n || "名称不明";
+      document.getElementById('ingredients').innerText = data.i || "記載なし";
+      document.getElementById('storage').innerText = data.s || "記載なし";
+
+      const allElem = document.getElementById('allergies');
+      allElem.innerHTML = '';
+      if (data.a && Array.isArray(data.a) && data.a.length > 0) {
+        data.a.forEach(item => {
+          const tag = document.createElement('span');
+          tag.classList.add('tag');
+          if (mandatoryList.includes(item)) {
+            tag.classList.add('mandatory');
+            tag.innerText = item + " (義務)";
+          } else {
+            tag.classList.add('recommended');
+            tag.innerText = item;
+          }
+          allElem.appendChild(tag);
+        });
+      } else {
+        allElem.innerText = "なし";
+      }
+
+      resultCard.classList.add('active');
+    }
+
+    function resetUI() {
+      resultCard.classList.remove('active');
+      scannerCard.style.display = 'flex';
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  </script>
+</body>
+</html><script>const btn = document.getElementById("mainBtn");
+btn.onclick = function() {
+  alert("JavaScriptが動作しました！");
+  btn.style.background = "#ff4757";
+  btn.innerText = "成功！";
+};</script></body></html>
